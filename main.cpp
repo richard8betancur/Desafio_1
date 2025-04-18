@@ -98,7 +98,7 @@ int main()
 
 
 unsigned char* loadPixels(QString input, int &width, int &height){
-/*
+    /*
  * @brief Carga una imagen BMP desde un archivo y extrae los datos de píxeles en formato RGB.
  *
  * Esta función utiliza la clase QImage de Qt para abrir una imagen en formato BMP, convertirla al
@@ -149,7 +149,7 @@ unsigned char* loadPixels(QString input, int &width, int &height){
 }
 
 bool exportImage(unsigned char* pixelData, int width,int height, QString archivoSalida){
-/*
+    /*
  * @brief Exporta una imagen en formato BMP a partir de un arreglo de píxeles en formato RGB.
  *
  * Esta función crea una imagen de tipo QImage utilizando los datos contenidos en el arreglo dinámico
@@ -194,7 +194,7 @@ bool exportImage(unsigned char* pixelData, int width,int height, QString archivo
 }
 
 unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels){
-/*
+    /*
  * @brief Carga la semilla y los resultados del enmascaramiento desde un archivo de texto.
  *
  * Esta función abre un archivo de texto que contiene una semilla en la primera línea y,
@@ -267,6 +267,15 @@ unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixel
     // Retornar el puntero al arreglo con los datos RGB
     return RGB;
 }
+
+
+
+
+
+
+
+
+
 
 
 
