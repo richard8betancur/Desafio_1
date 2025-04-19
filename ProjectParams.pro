@@ -1,3 +1,7 @@
 QT += core gui
 CONFIG += console c++17
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    bitops.cpp
+
+HEADERS += \
+    bitops.h

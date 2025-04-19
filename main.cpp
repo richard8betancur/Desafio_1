@@ -41,6 +41,7 @@ unsigned char* loadPixels(QString input, int &width, int &height);
 bool exportImage(unsigned char* pixelData, int width,int height, QString archivoSalida);
 unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
+
 int main()
 {
     // Definición de rutas de archivo de entrada (imagen original) y salida (imagen modificada)
@@ -54,6 +55,60 @@ int main()
     // Carga la imagen BMP en memoria dinámica y obtiene ancho y alto
     unsigned char *pixelData = loadPixels(archivoEntrada, width, height);
 
+     // Variables para almacenar la semilla y el número de píxeles leídos del archivo de enmascaramiento
+    int seed = 0;
+    int n_pixels = 0;
+
+    // Carga los datos de enmascaramiento desde un archivo .txt (semilla + valores RGB)
+    unsigned int *maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
+
+    unsigned char* pixelData = new unsigned char[width * height * 3];  // Asignación dinámica de memoria
+    unsigned char* maskingData = new unsigned char[n_pixels];           // Asignación para la máscara
+
+    // Aquí debes cargar o inicializar pixelData con datos antes de realizar la operación XOR
+
+    // Verifica que pixelData se haya inicializado correctamente
+    if (pixelData != nullptr && maskingData != nullptr) {
+        for (int i = 0; i < n_pixels * 3 && i < width * height * 3; i++) {
+            pixelData[i] = pixelData[i] ^ static_cast<unsigned char>(maskingData[i]);
+        }
+    } else {
+        cout << "Error: Datos no inicializados correctamente." << endl;
+        delete[] pixelData;
+        delete[] maskingData;
+        return -1;
+    }
+
+
+    // Asegúrate de que maskingData fue cargado correctamente
+    // Asegúrate de que maskingData fue cargado correctamente
+    // Validación y operación
+    if (maskingData != nullptr && pixelData != nullptr && n_pixels > 0) {
+        // Aplica operación XOR entre cada canal RGB de la imagen y los valores de enmascaramiento
+        for (int i = 0; i < n_pixels * 3 && i < width * height * 3; i++) {
+            pixelData[i] = pixelData[i] ^ static_cast<unsigned char>(maskingData[i]);
+        }
+    } else {
+        // Validación para asegurar que no haya errores de datos
+        if (n_pixels <= 0) {
+            cout << "Error: No se cargaron píxeles para el enmascaramiento." << endl;
+        }
+        if (maskingData == nullptr) {
+            cout << "Error: No se pudo cargar el archivo de enmascaramiento." << endl;
+        }
+
+        // Liberar memoria de pixelData y maskingData si no se cargaron correctamente
+        delete[] pixelData;
+        pixelData = nullptr;
+        delete[] maskingData; // Aquí liberamos la memoria de maskingData
+        maskingData = nullptr;
+
+        return -1; // Termina el programa si hubo errores
+    }
+
+
+
+    /*
     // Simula una modificación de la imagen asignando valores RGB incrementales
     // (Esto es solo un ejemplo de manipulación artificial)
     for (int i = 0; i < width * height * 3; i += 3) {
@@ -61,6 +116,7 @@ int main()
         pixelData[i + 1] = i; // Canal verde
         pixelData[i + 2] = i; // Canal azul
     }
+*/
 
     // Exporta la imagen modificada a un nuevo archivo BMP
     bool exportI = exportImage(pixelData, width, height, archivoSalida);
@@ -73,11 +129,6 @@ int main()
     pixelData = nullptr;
 
     // Variables para almacenar la semilla y el número de píxeles leídos del archivo de enmascaramiento
-    int seed = 0;
-    int n_pixels = 0;
-
-    // Carga los datos de enmascaramiento desde un archivo .txt (semilla + valores RGB)
-    unsigned int *maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
 
     // Muestra en consola los primeros valores RGB leídos desde el archivo de enmascaramiento
     for (int i = 0; i < n_pixels * 3; i += 3) {
