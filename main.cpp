@@ -35,12 +35,13 @@
 #include <iostream>
 #include <QCoreApplication>
 #include <QImage>
+#include "headers/bitops.h"
 
 using namespace std;
-unsigned char* loadPixels(QString input, int &width, int &height);
-bool exportImage(unsigned char* pixelData, int width,int height, QString archivoSalida);
-unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
+unsigned char* loadPixels(QString input, int &width, int &height);
+bool exportImage(unsigned char* pixelData, int width, int height, QString archivoSalida);
+unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
 int main()
 {
@@ -88,25 +89,43 @@ int main()
         return -1;
     }
 
-    // Aplica operación XOR entre cada canal RGB
+    // Aplica operación XOR entre cada canal RGB (usando el primer archivo de enmascaramiento M1)
     for (int i = 0; i < min(bytesToProcess, totalBytes); ++i) {
-        // Aplica XOR entre los datos de pixelData y maskingData
-        pixelData[i] ^= maskingData[i];
+        // Aplica XOR entre los datos de pixelData y maskingData usando xor_bits
+        pixelData[i] = xor_bits(pixelData[i], maskingData[i]);
+    }
+
+    // SEGUNDA OPERACIÓN A NIVEL DE BITS (ROTATE RIGHT CON M2)
+    int n_pixels_m2 = 0;
+    int seed_m2 = 0;
+    unsigned int *m2_data = loadSeedMasking("M2.txt", seed_m2, n_pixels_m2);
+
+    if (m2_data == nullptr || n_pixels_m2 <= 0) {
+        cout << "Advertencia: No se pudo cargar M2. Se usará solo M1." << endl;
+    } else {
+        int bytesToRotate = min(n_pixels_m2 * 3, totalBytes);
+
+        for (int i = 0; i < bytesToRotate; ++i) {
+            // Aplica rotación a la derecha de 2 bits
+            pixelData[i] = rotate_right(pixelData[i], 9);
+        }
+
+        delete[] m2_data;
+        m2_data = nullptr;
     }
 
     // Exporta la imagen modificada a un nuevo archivo BMP
     bool exportI = exportImage(pixelData, width, height, archivoSalida);
 
     // Muestra si la exportación fue exitosa (true o false)
-    cout << exportI << endl;
+    cout << "Exportación exitosa: " << exportI << endl;
 
     // Libera la memoria usada para los píxeles
     delete[] pixelData;
     pixelData = nullptr;
 
-    // Variables para almacenar la semilla y el número de píxeles leídos del archivo de enmascaramiento
-
     // Muestra en consola los primeros valores RGB leídos desde el archivo de enmascaramiento
+    cout << "Primeros valores de enmascaramiento de M1:" << endl;
     for (int i = 0; i < n_pixels * 3; i += 3) {
         cout << "Pixel " << i / 3 << ": ("
              << maskingData[i] << ", "
@@ -115,10 +134,8 @@ int main()
     }
 
     // Libera la memoria usada para los datos de enmascaramiento
-    if (maskingData != nullptr){
-        delete[] maskingData;
-        maskingData = nullptr;
-    }
+    delete[] maskingData;
+    maskingData = nullptr;
 
     return 0; // Fin del programa
 }
