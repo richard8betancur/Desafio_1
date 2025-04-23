@@ -1,17 +1,15 @@
 #ifndef BITOPS_H
 #define BITOPS_H
 
-#include <cstdint>
-
 // Operación XOR entre dos valores de 8 bits
-uint8_t xor_bits(uint8_t a, uint8_t b);
+unsigned char xor_bits(unsigned char a, unsigned char b);
 
 // Desplazamientos
-uint8_t shift_left(uint8_t value, uint8_t n);
-uint8_t shift_right(uint8_t value, uint8_t n);
+unsigned char shift_left(unsigned char value, int n);
+unsigned char shift_right(unsigned char value, int n);
 
 // Rotaciones
-uint8_t rotate_left(uint8_t value, uint8_t n);
-uint8_t rotate_right(uint8_t value, uint8_t n);
+unsigned char rotate_left(unsigned char value, int n);
+unsigned char rotate_right(unsigned char value, int n);
 
 #endif // BITOPS_H

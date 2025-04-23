@@ -35,72 +35,149 @@
 #include <iostream>
 #include <QCoreApplication>
 #include <QImage>
+#include <QFile>
+#include <QTextStream>
+#include <QByteArray>
 #include "headers/bitops.h"
 
 using namespace std;
 
+unsigned char rotate_left(unsigned char byte, int shift) {
+    return (byte << shift) | (byte >> (8 - shift));
+}
+
+unsigned char xor_bits(unsigned char a, unsigned char b) {
+    return a ^ b;
+}
+
 unsigned char* loadPixels(QString input, int &width, int &height);
 bool exportImage(unsigned char* pixelData, int width, int height, QString archivoSalida);
+unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
 int main()
 {
-    QString archivoEntrada = "I_O.bmp";
-    QString archivoSalida = "resultadoF.bmp";
-    QString archivoMascaraXor = "I_M.bmp";
+    QString archivoEntrada = "I_O.bmp";            // Imagen distorsionada final
+    QString archivoMascaraXor = "I_M.bmp";        // Máscara usada en XOR
+    QString archivoSalidaFinal = "IO_restaurado.bmp";
 
-    // Cargar máscara para XOR
-    QImage imagenMascaraXor;
-    if (!imagenMascaraXor.load(archivoMascaraXor)) {
-        cerr << "Error al cargar la imagen de máscara: " << archivoMascaraXor.toStdString() << endl;
+    // Cargar máscara I_M
+    QImage imagenMascara;
+    if (!imagenMascara.load(archivoMascaraXor)) {
+        cerr << "Error al cargar la máscara XOR: " << archivoMascaraXor.toStdString() << endl;
         return -1;
     }
+    unsigned char* pixelsMascaraXor = imagenMascara.bits();
+    int widthXor = imagenMascara.width();
+    int heightXor = imagenMascara.height();
 
-    cout << "Máscara XOR cargada correctamente." << endl;
-
-    unsigned char* pixelsMascaraXor = imagenMascaraXor.bits();
-    int widthXor = imagenMascaraXor.width();
-    int heightXor = imagenMascaraXor.height();
-
+    // Cargar imagen P3
     int width = 0, height = 0;
     unsigned char* pixelData = loadPixels(archivoEntrada, width, height);
     if (pixelData == nullptr) {
-        cerr << "Error: No se pudieron cargar los datos de la imagen." << endl;
+        cerr << "Error al cargar la imagen: " << archivoEntrada.toStdString() << endl;
         return -1;
     }
 
     int totalBytes = width * height * 3;
     if (width != widthXor || height != heightXor) {
-        cerr << "Error: La máscara y la imagen tienen dimensiones diferentes." << endl;
+        cerr << "Error: dimensiones no coinciden con la máscara." << endl;
         delete[] pixelData;
         return -1;
     }
 
-    // 1. Primer XOR con I_M
-    for (int i = 0; i < totalBytes; ++i) {
-        pixelData[i] = xor_bits(pixelData[i], pixelsMascaraXor[i]);
-    }
-
-    // 2. Rotación izquierda 3 bits
-    for (int i = 0; i < totalBytes; ++i) {
-        pixelData[i] = rotate_left(pixelData[i], 3);
-    }
-
-    // 3. Segundo XOR con I_M
-    for (int i = 0; i < totalBytes; ++i) {
-        pixelData[i] = xor_bits(pixelData[i], pixelsMascaraXor[i]);
-    }
-
-    if (!exportImage(pixelData, width, height, archivoSalida)) {
-        cerr << "Error al exportar la imagen modificada." << endl;
+    // PASO INVERSO 1: P2 = P3 XOR IM
+    unsigned char* paso1 = new unsigned char[totalBytes];
+    if (paso1 == nullptr) {
+        cerr << "Error de memoria al asignar paso1." << endl;
         delete[] pixelData;
         return -1;
     }
+    for (int i = 0; i < totalBytes; ++i) {
+        paso1[i] = xor_bits(pixelData[i], pixelsMascaraXor[i]);
+    }
+    exportImage(paso1, width, height, "P2_inverso.bmp");
 
-    cout << "Imagen exportada correctamente: " << archivoSalida.toStdString() << endl;
+    // PASO INVERSO 2: P1 = rotar izquierda 3 bits
+    unsigned char* paso2 = new unsigned char[totalBytes];
+    if (paso2 == nullptr) {
+        cerr << "Error de memoria al asignar paso2." << endl;
+        delete[] pixelData;
+        delete[] paso1;
+        return -1;
+    }
+    for (int i = 0; i < totalBytes; ++i) {
+        paso2[i] = rotate_left(paso1[i], 3);  // Asegúrate de que paso1 está correctamente inicializado
+    }
+    exportImage(paso2, width, height, "P1_inverso.bmp");
 
+    // PASO INVERSO 3: IO = P1 XOR IM
+    unsigned char* paso3 = new unsigned char[totalBytes];
+    if (paso3 == nullptr) {
+        cerr << "Error de memoria al asignar paso3." << endl;
+        delete[] pixelData;
+        delete[] paso1;
+        delete[] paso2;
+        return -1;
+    }
+    for (int i = 0; i < totalBytes; ++i) {
+        paso3[i] = xor_bits(paso2[i], pixelsMascaraXor[i]);
+    }
+    exportImage(paso3, width, height, archivoSalidaFinal);
+
+    cout << "Proceso inverso completo." << endl;
+    cout << "→ P2 guardado como: P2_inverso.bmp" << endl;
+    cout << "→ P1 guardado como: P1_inverso.bmp" << endl;
+    cout << "→ Imagen original restaurada: " << archivoSalidaFinal.toStdString() << endl;
+
+    // Limpiar memoria
     delete[] pixelData;
+    delete[] paso1;
+    delete[] paso2;
+    delete[] paso3;
+
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
