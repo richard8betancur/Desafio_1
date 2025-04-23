@@ -35,151 +35,88 @@
 #include <iostream>
 #include <QCoreApplication>
 #include <QImage>
-#include <QFile>
-#include <QTextStream>
-#include <QByteArray>
-#include "headers/bitops.h"
+#include "headers/bitops.h"  // Incluir archivo de cabecera de operaciones bit a bit
 
 using namespace std;
 
-unsigned char rotate_left(unsigned char byte, int shift) {
-    return (byte << shift) | (byte >> (8 - shift));
-}
-
-unsigned char xor_bits(unsigned char a, unsigned char b) {
-    return a ^ b;
-}
-
 unsigned char* loadPixels(QString input, int &width, int &height);
-bool exportImage(unsigned char* pixelData, int width, int height, QString archivoSalida);
+bool exportImage(unsigned char* pixelData, int width,int height, QString archivoSalida);
 unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
 int main()
 {
-    QString archivoEntrada = "I_O.bmp";            // Imagen distorsionada final
-    QString archivoMascaraXor = "I_M.bmp";        // Máscara usada en XOR
-    QString archivoSalidaFinal = "IO_restaurado.bmp";
+    QString archivoEntrada = "I_D.bmp";      // Imagen distorsionada final
+    QString archivoMascara = "I_M.bmp";      // Máscara usada en los XOR
+    QString archivoSalidaFinal = "ResultadoF.bmp";  // Resultado: imagen original recuperada
 
-    // Cargar máscara I_M
-    QImage imagenMascara;
-    if (!imagenMascara.load(archivoMascaraXor)) {
-        cerr << "Error al cargar la máscara XOR: " << archivoMascaraXor.toStdString() << endl;
-        return -1;
-    }
-    unsigned char* pixelsMascaraXor = imagenMascara.bits();
-    int widthXor = imagenMascara.width();
-    int heightXor = imagenMascara.height();
-
-    // Cargar imagen P3
     int width = 0, height = 0;
-    unsigned char* pixelData = loadPixels(archivoEntrada, width, height);
-    if (pixelData == nullptr) {
-        cerr << "Error al cargar la imagen: " << archivoEntrada.toStdString() << endl;
+    int maskWidth = 0, maskHeight = 0;
+
+    // 1. Cargar imagen distorsionada
+    unsigned char *imgDistorsionada = loadPixels(archivoEntrada, width, height);
+
+    if (imgDistorsionada == nullptr) {
+        cerr << "Error al cargar la imagen distorsionada." << endl;
+        return -1;  // No se cargó correctamente, salimos
+    }
+
+    // 2. Cargar máscara I_M.bmp
+    unsigned char *mascara = loadPixels(archivoMascara, maskWidth, maskHeight);
+
+    if (width != maskWidth || height != maskHeight) {
+        cerr << "Error: Las dimensiones de la máscara y la imagen no coinciden." << endl;
+        delete[] imgDistorsionada;
+        delete[] mascara;
         return -1;
     }
 
-    int totalBytes = width * height * 3;
-    if (width != widthXor || height != heightXor) {
-        cerr << "Error: dimensiones no coinciden con la máscara." << endl;
-        delete[] pixelData;
-        return -1;
+    // 3. Aplicar XOR entre I_D y I_M → resultado intermedio (rotado IR3)
+    unsigned char* IR3 = new unsigned char[width * height * 3];
+    for (int i = 0; i < width * height * 3; i++) {
+        IR3[i] = xor_bits(imgDistorsionada[i], mascara[i]);
     }
 
-    // PASO INVERSO 1: P2 = P3 XOR IM
-    unsigned char* paso1 = new unsigned char[totalBytes];
-    if (paso1 == nullptr) {
-        cerr << "Error de memoria al asignar paso1." << endl;
-        delete[] pixelData;
-        return -1;
+    // 4. Aplicar rotación 3 bits a la izquierda sobre IR3 → recuperamos P1
+    unsigned char* P1 = new unsigned char[width * height * 3];
+    for (int i = 0; i < width * height * 3; i++) {
+        P1[i] = rotate_left(IR3[i], 3);
     }
-    for (int i = 0; i < totalBytes; ++i) {
-        paso1[i] = xor_bits(pixelData[i], pixelsMascaraXor[i]);
-    }
-    exportImage(paso1, width, height, "P2_inverso.bmp");
 
-    // PASO INVERSO 2: P1 = rotar izquierda 3 bits
-    unsigned char* paso2 = new unsigned char[totalBytes];
-    if (paso2 == nullptr) {
-        cerr << "Error de memoria al asignar paso2." << endl;
-        delete[] pixelData;
-        delete[] paso1;
-        return -1;
+    // 5. XOR entre P1 y máscara → recuperamos imagen original I_O
+    unsigned char* originalRecuperada = new unsigned char[width * height * 3];
+    for (int i = 0; i < width * height * 3; i++) {
+        originalRecuperada[i] = xor_bits(P1[i], mascara[i]);
     }
-    for (int i = 0; i < totalBytes; ++i) {
-        paso2[i] = rotate_left(paso1[i], 3);  // Asegúrate de que paso1 está correctamente inicializado
-    }
-    exportImage(paso2, width, height, "P1_inverso.bmp");
 
-    // PASO INVERSO 3: IO = P1 XOR IM
-    unsigned char* paso3 = new unsigned char[totalBytes];
-    if (paso3 == nullptr) {
-        cerr << "Error de memoria al asignar paso3." << endl;
-        delete[] pixelData;
-        delete[] paso1;
-        delete[] paso2;
-        return -1;
-    }
-    for (int i = 0; i < totalBytes; ++i) {
-        paso3[i] = xor_bits(paso2[i], pixelsMascaraXor[i]);
-    }
-    exportImage(paso3, width, height, archivoSalidaFinal);
+    // 6. Exportar la imagen final recuperada
+    bool exportOk = exportImage(originalRecuperada, width, height, archivoSalidaFinal);
+    cout << "¿Exportación exitosa?: " << (exportOk ? "Sí" : "No") << endl;
 
-    cout << "Proceso inverso completo." << endl;
-    cout << "→ P2 guardado como: P2_inverso.bmp" << endl;
-    cout << "→ P1 guardado como: P1_inverso.bmp" << endl;
-    cout << "→ Imagen original restaurada: " << archivoSalidaFinal.toStdString() << endl;
+    // Liberar memoria
+    delete[] imgDistorsionada;
+    delete[] mascara;
+    delete[] IR3;
+    delete[] P1;
+    delete[] originalRecuperada;
 
-    // Limpiar memoria
-    delete[] pixelData;
-    delete[] paso1;
-    delete[] paso2;
-    delete[] paso3;
+    int seed = 0;
+    int n_pixels = 0;
+    unsigned int *maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
+
+    for (int i = 0; i < n_pixels * 3; i += 3) {
+        cout << "Pixel " << i / 3 << ": ("
+             << maskingData[i] << ", "
+             << maskingData[i + 1] << ", "
+             << maskingData[i + 2] << ")" << endl;
+    }
+
+    if (maskingData != nullptr){
+        delete[] maskingData;
+        maskingData = nullptr;
+    }
 
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 unsigned char* loadPixels(QString input, int &width, int &height){
     /*

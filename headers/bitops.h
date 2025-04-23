@@ -1,7 +1,7 @@
 #ifndef BITOPS_H
 #define BITOPS_H
 
-#include <cstdint>
+#include <cstdint>  // Usamos uint8_t para ser más explícitos y portables
 
 // Operación XOR entre dos valores de 8 bits
 uint8_t xor_bits(uint8_t a, uint8_t b);

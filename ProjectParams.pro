@@ -8,5 +8,4 @@ SOURCES += main.cpp \
     bitops.cpp
 
 HEADERS += \
-    headers.h \
     headers/bitops.h
