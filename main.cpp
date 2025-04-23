@@ -41,103 +41,65 @@ using namespace std;
 
 unsigned char* loadPixels(QString input, int &width, int &height);
 bool exportImage(unsigned char* pixelData, int width, int height, QString archivoSalida);
-unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
 int main()
 {
-    // Definición de rutas de archivo de entrada (imagen original) y salida (imagen modificada)
     QString archivoEntrada = "I_O.bmp";
-    QString archivoSalida = "I_D.bmp";
+    QString archivoSalida = "resultadoF.bmp";
+    QString archivoMascaraXor = "I_M.bmp";
 
-    // Variables para almacenar las dimensiones de la imagen
-    int height = 0;
-    int width = 0;
+    // Cargar máscara para XOR
+    QImage imagenMascaraXor;
+    if (!imagenMascaraXor.load(archivoMascaraXor)) {
+        cerr << "Error al cargar la imagen de máscara: " << archivoMascaraXor.toStdString() << endl;
+        return -1;
+    }
 
-    // Carga la imagen BMP en memoria dinámica y obtiene ancho y alto
-    unsigned char *pixelData = loadPixels(archivoEntrada, width, height);
+    cout << "Máscara XOR cargada correctamente." << endl;
 
-    // Validación de que pixelData no es nulo
+    unsigned char* pixelsMascaraXor = imagenMascaraXor.bits();
+    int widthXor = imagenMascaraXor.width();
+    int heightXor = imagenMascaraXor.height();
+
+    int width = 0, height = 0;
+    unsigned char* pixelData = loadPixels(archivoEntrada, width, height);
     if (pixelData == nullptr) {
-        cout << "Error: No se pudieron cargar los datos de la imagen." << endl;
+        cerr << "Error: No se pudieron cargar los datos de la imagen." << endl;
         return -1;
     }
 
-    // Variables para almacenar la semilla y el número de píxeles leídos del archivo de enmascaramiento
-    int seed = 0;
-    int n_pixels = 0;
-
-    // Carga los datos de enmascaramiento desde un archivo .txt (semilla + valores RGB)
-    unsigned int *maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
-
-    // Validación de datos cargados
-    if (maskingData == nullptr || n_pixels <= 0) {
-        cout << "Error: No se pudieron cargar los datos correctamente." << endl;
+    int totalBytes = width * height * 3;
+    if (width != widthXor || height != heightXor) {
+        cerr << "Error: La máscara y la imagen tienen dimensiones diferentes." << endl;
         delete[] pixelData;
-        delete[] maskingData;
         return -1;
     }
 
-    // Asegura que los datos de pixelData y maskingData tengan suficiente tamaño
-    int totalBytes = width * height * 3; // Tamaño total de los píxeles de la imagen
-    int bytesToProcess = n_pixels * 3;   // Bytes a procesar según el archivo de enmascaramiento
+    // 1. Primer XOR con I_M
+    for (int i = 0; i < totalBytes; ++i) {
+        pixelData[i] = xor_bits(pixelData[i], pixelsMascaraXor[i]);
+    }
 
-    // Verifica que no estemos procesando más bytes de los que existen en los datos cargados
-    if (bytesToProcess > totalBytes) {
-        cout << "Error: El archivo de enmascaramiento tiene más datos de los que puede manejar la imagen." << endl;
+    // 2. Rotación izquierda 3 bits
+    for (int i = 0; i < totalBytes; ++i) {
+        pixelData[i] = rotate_left(pixelData[i], 3);
+    }
+
+    // 3. Segundo XOR con I_M
+    for (int i = 0; i < totalBytes; ++i) {
+        pixelData[i] = xor_bits(pixelData[i], pixelsMascaraXor[i]);
+    }
+
+    if (!exportImage(pixelData, width, height, archivoSalida)) {
+        cerr << "Error al exportar la imagen modificada." << endl;
         delete[] pixelData;
-        delete[] maskingData;
         return -1;
     }
 
-    // Aplica operación XOR entre cada canal RGB (usando el primer archivo de enmascaramiento M1)
-    for (int i = 0; i < min(bytesToProcess, totalBytes); ++i) {
-        // Aplica XOR entre los datos de pixelData y maskingData usando xor_bits
-        pixelData[i] = xor_bits(pixelData[i], maskingData[i]);
-    }
+    cout << "Imagen exportada correctamente: " << archivoSalida.toStdString() << endl;
 
-    // SEGUNDA OPERACIÓN A NIVEL DE BITS (ROTATE RIGHT CON M2)
-    int n_pixels_m2 = 0;
-    int seed_m2 = 0;
-    unsigned int *m2_data = loadSeedMasking("M2.txt", seed_m2, n_pixels_m2);
-
-    if (m2_data == nullptr || n_pixels_m2 <= 0) {
-        cout << "Advertencia: No se pudo cargar M2. Se usará solo M1." << endl;
-    } else {
-        int bytesToRotate = min(n_pixels_m2 * 3, totalBytes);
-
-        for (int i = 0; i < bytesToRotate; ++i) {
-            // Aplica rotación a la derecha de 2 bits
-            pixelData[i] = rotate_right(pixelData[i], 9);
-        }
-
-        delete[] m2_data;
-        m2_data = nullptr;
-    }
-
-    // Exporta la imagen modificada a un nuevo archivo BMP
-    bool exportI = exportImage(pixelData, width, height, archivoSalida);
-
-    // Muestra si la exportación fue exitosa (true o false)
-    cout << "Exportación exitosa: " << exportI << endl;
-
-    // Libera la memoria usada para los píxeles
     delete[] pixelData;
-    pixelData = nullptr;
-
-    // Muestra en consola los primeros valores RGB leídos desde el archivo de enmascaramiento
-    cout << "Primeros valores de enmascaramiento de M1:" << endl;
-    for (int i = 0; i < n_pixels * 3; i += 3) {
-        cout << "Pixel " << i / 3 << ": ("
-             << maskingData[i] << ", "
-             << maskingData[i + 1] << ", "
-             << maskingData[i + 2] << ")" << endl;
-    }
-
-    // Libera la memoria usada para los datos de enmascaramiento
-    delete[] maskingData;
-    maskingData = nullptr;
-
-    return 0; // Fin del programa
+    return 0;
 }
 
 
