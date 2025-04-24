@@ -1,7 +1,7 @@
 // launcher.cpp
 #include <iostream>
 
-#define EJECUTAR_VERIFICADOR // Comentá esta línea para correr main.cpp
+#define EJECUTAR_VERIFICADOR // Comentar esta linea para correr el main.cpp principal
 
 #ifdef EJECUTAR_VERIFICADOR
 int run_verificador(); // Declaración de función en verificador.cpp

@@ -45,41 +45,50 @@ unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixel
 
 int run_principal()
 {
-    QString archivoEntrada = "I_D.bmp";      // Imagen distorsionada final
-    QString archivoMascara = "I_M.bmp";      // Máscara usada en los XOR
-    QString archivoSalidaFinal = "ResultadoF.bmp";  // Resultado: imagen original recuperada
+    QString archivoEntrada = "I_D.bmp";      // Imagen distorsionada final, usada como entrada
+    QString archivoMascara = "I_M.bmp";      // Mascara usada en los XOR
+    QString archivoSalidaFinal = "ResultadoF.bmp";  // Resultado de la imagen original recuperada
 
     int width = 0, height = 0;
     int maskWidth = 0, maskHeight = 0;
 
-    // 1. Cargar imagen distorsionada
+    // 1. Cargar la imagen distorsionada I_D.bmp
     unsigned char *imgDistorsionada = loadPixels(archivoEntrada, width, height);
 
     if (imgDistorsionada == nullptr) {
         cerr << "Error al cargar la imagen distorsionada." << endl;
-        return -1;  // No se cargó correctamente, salimos
+        return -1; // Salimos si no se carga correctamente la imagen distorsionada
     }
 
-    // 2. Cargar máscara I_M.bmp
+    // 2. Cargar la mascara I_M.bmp
     unsigned char *mascara = loadPixels(archivoMascara, maskWidth, maskHeight);
 
     if (width != maskWidth || height != maskHeight) {
-        cerr << "Error: Las dimensiones de la máscara y la imagen no coinciden." << endl;
+        cerr << "Error: Las dimensiones de la mascara y la imagen no son iguales." << endl;
         delete[] imgDistorsionada;
         delete[] mascara;
         return -1;
     }
 
-    // 3. Aplicar XOR entre I_D y I_M → resultado intermedio (rotado IR3)
+    // 3. Aplicar XOR entre I_D.bmp y I_M.bmp   (resultado intermedio (rotado IR3))
     unsigned char* IR3 = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
         IR3[i] = xor_bits(imgDistorsionada[i], mascara[i]);
     }
 
+
+
+
+
+
+
+
+
+
     // 4. Aplicar rotación 3 bits a la izquierda sobre IR3 → recuperamos P1
     unsigned char* P1 = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
-        P1[i] = rotate_left(IR3[i], 3);
+        P1[i] = rotacion_left(IR3[i], 3);
     }
 
     // 5. XOR entre P1 y máscara → recuperamos imagen original I_O
@@ -99,6 +108,12 @@ int run_principal()
     delete[] P1;
     delete[] originalRecuperada;
 
+
+
+
+
+
+
     int seed = 0;
     int n_pixels = 0;
     unsigned int *maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
@@ -114,6 +129,10 @@ int run_principal()
         delete[] maskingData;
         maskingData = nullptr;
     }
+
+
+
+
 
     return 0;
 }

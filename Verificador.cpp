@@ -1,81 +1,80 @@
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <QCoreApplication>
 #include <QImage>
-#include <QString>
-#include "headers/bitops.h"  // XOR y rotaciones
+#include "headers/bitops.h"  // Incluir archivo de cabecera de operaciones bit a bit
 
 using namespace std;
 
-// Declaraciones de funciones externas
 unsigned char* loadPixels(QString input, int &width, int &height);
+bool exportImage(unsigned char* pixelData, int width, int height, QString archivoSalida);
 unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
 int run_verificador() {
 
-    QString archivoImagen = "I_D.bmp";     // Imagen distorsionada
-    QString archivoMascara = "M.bmp";       // Máscara de color
-    const char* archivoRastreo = "M1.txt";  // Archivo de rastreo
+    int seed = 0;
+    int n_pixels = 0;
 
-    int width = 0, height = 0;
-    int maskWidth = 0, maskHeight = 0;
+    // Usamos la misma variable para cargar los datos de los tres archivos
+    unsigned int* maskingData = nullptr;
 
-    // 1. Cargar imagen distorsionada y máscara de color
-    unsigned char* imagen = loadPixels(archivoImagen, width, height);
-    unsigned char* mascaraColor = loadPixels(archivoMascara, maskWidth, maskHeight);
 
-    if (!imagen || !mascaraColor) {
-        cerr << "Error al cargar la imagen o la máscara." << endl;
-        return -1;
-    }
-
-    if (width != maskWidth || height != maskHeight) {
-        cerr << "Dimensiones no coinciden entre la imagen y la máscara." << endl;
-        delete[] imagen;
-        delete[] mascaraColor;
-        return -1;
-    }
-
-    // 2. Cargar archivo de rastreo
-    int seed = 0, n_pixels = 0;
-    unsigned int* datosRastreo = loadSeedMasking(archivoRastreo, seed, n_pixels);
-
-    if (!datosRastreo) {
-        cerr << "No se pudo cargar el archivo de rastreo." << endl;
-        delete[] imagen;
-        delete[] mascaraColor;
-        return -1;
-    }
-
-    // 3. Aplicar transformación XOR como candidata
-    bool coincide = true;
-    for (int i = 0; i < n_pixels * 3; i++) {
-        int idx = seed * 3 + i;
-        if (idx >= width * height * 3) {
-            coincide = false;
-            break;
+    // Cargar y mostrar los datos de M0.txt
+    maskingData = loadSeedMasking("M0.txt", seed, n_pixels);
+    if (maskingData != nullptr) {
+        for (int i = 0; i < n_pixels * 3; i += 3) {
+            cout << "Pixel " << i / 3 << ": ("
+                 << maskingData[i] << ", "
+                 << maskingData[i + 1] << ", "
+                 << maskingData[i + 2] << ")" << endl;
         }
-
-        unsigned char pixelTransformado = xor_bits(imagen[idx], mascaraColor[i]);
-        unsigned int suma = static_cast<unsigned int>(pixelTransformado) + static_cast<unsigned int>(mascaraColor[i]);
-
-        if (suma != datosRastreo[i]) {
-            coincide = false;
-            break;
-        }
-    }
-
-    if (coincide) {
-        cout << "Transformaci\xC3\xB3n XOR coincide con el archivo de rastreo." << endl;
+        delete[] maskingData;  // Liberar memoria
+        maskingData = nullptr;
     } else {
-        cout << "Transformaci\xC3\xB3n XOR no coincide." << endl;
+        cout << "Error al cargar M0.txt" << endl;
     }
 
-    // Limpiar memoria
-    delete[] imagen;
-    delete[] mascaraColor;
-    delete[] datosRastreo;
+
+
+
+
+    // Cargar y mostrar los datos de M1.txt
+    maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
+    if (maskingData != nullptr) {
+        for (int i = 0; i < n_pixels * 3; i += 3) {
+            cout << "Pixel " << i / 3 << ": ("
+                 << maskingData[i] << ", "
+                 << maskingData[i + 1] << ", "
+                 << maskingData[i + 2] << ")" << endl;
+        }
+        delete[] maskingData;  // Liberar memoria
+        maskingData = nullptr;
+    } else {
+        cout << "Error al cargar M1.txt" << endl;
+    }
+
+
+    // Cargar y mostrar los datos de M2.txt
+    maskingData = loadSeedMasking("M2.txt", seed, n_pixels);
+    if (maskingData != nullptr) {
+        for (int i = 0; i < n_pixels * 3; i += 3) {
+            cout << "Pixel " << i / 3 << ": ("
+                 << maskingData[i] << ", "
+                 << maskingData[i + 1] << ", "
+                 << maskingData[i + 2] << ")" << endl;
+        }
+        delete[] maskingData;  // Liberar memoria
+        maskingData = nullptr;
+    } else {
+        cout << "Error al cargar M2.txt" << endl;
+    }
+
 
     return 0;
 }
+
+
+
+
 
 
