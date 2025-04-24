@@ -43,7 +43,7 @@ unsigned char* loadPixels(QString input, int &width, int &height);
 bool exportImage(unsigned char* pixelData, int width,int height, QString archivoSalida);
 unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
-int main()
+int run_principal()
 {
     QString archivoEntrada = "I_D.bmp";      // Imagen distorsionada final
     QString archivoMascara = "I_M.bmp";      // Máscara usada en los XOR
