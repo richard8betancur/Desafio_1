@@ -76,14 +76,10 @@ int run_principal()
         IR3[i] = xor_bits(imgDistorsionada[i], mascara[i]);
     }
 
-
-
-
-
-
-
-
-
+    // Guardar IR3 para verificación externa
+    if (!exportImage(IR3, width, height, "IR3.bmp")) {
+        cerr << "Error al guardar la imagen IR3.bmp" << endl;
+    }
 
     // 4. Aplicar rotación 3 bits a la izquierda sobre IR3 → recuperamos P1
     unsigned char* P1 = new unsigned char[width * height * 3];
@@ -91,10 +87,19 @@ int run_principal()
         P1[i] = rotacion_left(IR3[i], 3);
     }
 
+    // Guardar P1 para verificación externa
+    if (!exportImage(P1, width, height, "P1.bmp")) {
+        cerr << "Error al guardar la imagen P1.bmp" << endl;
+    }
+
     // 5. XOR entre P1 y máscara → recuperamos imagen original I_O
     unsigned char* originalRecuperada = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
         originalRecuperada[i] = xor_bits(P1[i], mascara[i]);
+    }
+
+    if (!exportImage(originalRecuperada, width, height, "originalrecuperada.bmp")) {
+        cerr << "Error al guardar la imagen originalrecuperada.bmp" << endl;
     }
 
     // 6. Exportar la imagen final recuperada
@@ -107,32 +112,6 @@ int run_principal()
     delete[] IR3;
     delete[] P1;
     delete[] originalRecuperada;
-
-
-
-
-
-
-
-    int seed = 0;
-    int n_pixels = 0;
-    unsigned int *maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
-
-    for (int i = 0; i < n_pixels * 3; i += 3) {
-        cout << "Pixel " << i / 3 << ": ("
-             << maskingData[i] << ", "
-             << maskingData[i + 1] << ", "
-             << maskingData[i + 2] << ")" << endl;
-    }
-
-    if (maskingData != nullptr){
-        delete[] maskingData;
-        maskingData = nullptr;
-    }
-
-
-
-
 
     return 0;
 }
