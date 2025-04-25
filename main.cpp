@@ -71,23 +71,23 @@ int run_principal()
     }
 
     // 3. Aplicar XOR entre I_D.bmp y I_M.bmp   (resultado intermedio (rotado IR3))
-    unsigned char* IR3 = new unsigned char[width * height * 3];
+    unsigned char* P2 = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
-        IR3[i] = xor_bits(imgDistorsionada[i], mascara[i]);
+        P2[i] = xor_bits(imgDistorsionada[i], mascara[i]);
     }
 
-    // Guardar IR3 para verificación externa
-    if (!exportImage(IR3, width, height, "IR3.bmp")) {
-        cerr << "Error al guardar la imagen IR3.bmp" << endl;
+    // Guardar P2 para verificacion externa
+    if (!exportImage(P2, width, height, "P2.bmp")) {
+        cerr << "Error al guardar la imagen P2.bmp" << endl;
     }
 
     // 4. Aplicar rotación 3 bits a la izquierda sobre IR3 → recuperamos P1
     unsigned char* P1 = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
-        P1[i] = rotacion_left(IR3[i], 3);
+        P1[i] = rotacion_left(P2[i], 3);
     }
 
-    // Guardar P1 para verificación externa
+    // Guardar P1 para verificacion externa
     if (!exportImage(P1, width, height, "P1.bmp")) {
         cerr << "Error al guardar la imagen P1.bmp" << endl;
     }
@@ -106,12 +106,70 @@ int run_principal()
     bool exportOk = exportImage(originalRecuperada, width, height, archivoSalidaFinal);
     cout << "¿Exportación exitosa?: " << (exportOk ? "Sí" : "No") << endl;
 
-    // Liberar memoria
+    // Liberamos la memoria
     delete[] imgDistorsionada;
     delete[] mascara;
-    delete[] IR3;
     delete[] P1;
+    delete[] P2;
     delete[] originalRecuperada;
+
+
+
+
+    // Mostrar la semilla y los pixeles de cada archivo txt (M0, M1, M2)
+
+    int seed = 0;
+    int n_pixels = 0;
+
+    // Usamos la misma variable para cargar los datos de los tres archivos
+    unsigned int* maskingData = nullptr;
+
+
+    // Cargar y mostrar los datos de M0.txt
+    maskingData = loadSeedMasking("M0.txt", seed, n_pixels);
+    if (maskingData != nullptr) {
+        for (int i = 0; i < n_pixels * 3; i += 3) {
+            cout << "Pixel " << i / 3 << ": ("
+                 << maskingData[i] << ", "
+                 << maskingData[i + 1] << ", "
+                 << maskingData[i + 2] << ")" << endl;
+        }
+        delete[] maskingData;  // Liberar memoria
+        maskingData = nullptr;
+    } else {
+        cout << "Error al cargar M0.txt" << endl;
+    }
+
+    // Cargar y mostrar los datos de M1.txt
+    maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
+    if (maskingData != nullptr) {
+        for (int i = 0; i < n_pixels * 3; i += 3) {
+            cout << "Pixel " << i / 3 << ": ("
+                 << maskingData[i] << ", "
+                 << maskingData[i + 1] << ", "
+                 << maskingData[i + 2] << ")" << endl;
+        }
+        delete[] maskingData;  // Liberar memoria
+        maskingData = nullptr;
+    } else {
+        cout << "Error al cargar M1.txt" << endl;
+    }
+
+
+    // Cargar y mostrar los datos de M2.txt
+    maskingData = loadSeedMasking("M2.txt", seed, n_pixels);
+    if (maskingData != nullptr) {
+        for (int i = 0; i < n_pixels * 3; i += 3) {
+            cout << "Pixel " << i / 3 << ": ("
+                 << maskingData[i] << ", "
+                 << maskingData[i + 1] << ", "
+                 << maskingData[i + 2] << ")" << endl;
+        }
+        delete[] maskingData;  // Liberar memoria
+        maskingData = nullptr;
+    } else {
+        cout << "Error al cargar M2.txt" << endl;
+    }
 
     return 0;
 }

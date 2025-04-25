@@ -6,87 +6,141 @@
 
 using namespace std;
 
-// Declaraciones de funciones auxiliares
 unsigned char* loadPixels(QString input, int &width, int &height);
+unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixels);
 
-// Función principal de verificación
-int verificarConImagentxt(QString imagenPath, const char* archivoTxt, int semilla, QString mascaraPath) {
-
-    int width = 0, height = 0;
-    int maskWidth = 0, maskHeight = 0;
-
-    // 1. Cargar la imagen a verificar
-    unsigned char* imagen = loadPixels(imagenPath, width, height);
-    if (!imagen) {
-        cerr << "Error al cargar la imagen: " << imagenPath.toStdString() << endl;
-        return -1;
-    }
-
-    // 2. Cargar la máscara M.bmp
-    unsigned char* mascara = loadPixels(mascaraPath, maskWidth, maskHeight);
-    if (!mascara) {
-        cerr << "Error al cargar la máscara: " << mascaraPath.toStdString() << endl;
-        delete[] imagen;
-        return -1;
-    }
-
-    int total_mascara = maskWidth * maskHeight * 3;
-
-    // 4. Leer archivo mX.txt
-    ifstream archivo(archivoTxt);
-
-    // 5. Comparar pixel a pixel con la formula S(k) = I_D(k + s) + M(k)
-    int coincidencias = 0;
-    int tolerancia    = 5;  // Diferencia permitida en cada suma
-
-    for (int k = 0; k < total_mascara; ++k) {
-        int esperado;
-        archivo >> esperado;
-
-        // Suma directa con desplazamiento, máscara y comparación con tolerancia
-        if (abs(((imagen[k + semilla] + mascara[k]) & 0xFF) - esperado) <= tolerancia) {
-            coincidencias++;
-        }
-    }
-    archivo.close();
-
-    // 6. Mostrar resultados
-    double porcentaje = 100.0 * coincidencias / total_mascara;
-
-    cout << "Comparando: " << imagenPath.toStdString() << " con " << archivoTxt
-         << " | Semilla: " << semilla << endl;
-    cout << "   Coincidencias: " << coincidencias << " / " << total_mascara
-         << " (" << porcentaje << "%)" << endl;
-
-    if (porcentaje >= 80.0) {
-        cout << "Coincidencia aceptable! Esta imagen podría ser " << archivoTxt << endl;
-    } else {
-        cout << "No parece coincidir con " << archivoTxt << endl;
-    }
-
-    // 7. Liberar memoria
-    delete[] imagen;
-    delete[] mascara;
-
-    return 0;
-}
-
-// Función para ejecutar varias comparaciones
 int run_verificador() {
 
     QString imagen1 = "originalRecuperada.bmp";
     QString imagen2 = "P1.bmp";
-    QString imagen3 = "IR3.bmp";
+    QString imagen3 = "P2.bmp";
     QString mascara = "M.bmp";
 
-    // 1. Comparar M0 con imagen recuperada
-    verificarConImagentxt(imagen1, "m0.txt", 58077, mascara);
+    int width = 0, height = 0;
+    int mascaraWidth = 0, mascaraHeight = 0;
 
-    // 2. Comparar M1 con P1
-    verificarConImagentxt(imagen2, "m1.txt", 100, mascara);
 
-    // 3. Comparar M2 con IR3
-    verificarConImagentxt(imagen3, "m2.txt", 15, mascara);
+    // Cargamos las imagenes de cada paso de recuperacion de I_0
+    unsigned char *primerXOR = loadPixels(imagen3, width, height);
+
+    if (primerXOR == nullptr) {
+        cerr << "Error al cargar la imagen distorsionada." << endl;
+        return -1; // Salimos si no se carga correctamente la imagen distorsionada.
+    }
+
+    unsigned char *rotacion3bits = loadPixels(imagen2, width, height);
+
+    if (rotacion3bits == nullptr) {
+        cerr << "Error al cargar la imagen distorsionada." << endl;
+        return -1; // Salimos si no se carga correctamente la imagen distorsionada.
+    }
+
+    unsigned char *segundoXOR = loadPixels(imagen1, width, height);
+
+    if (segundoXOR == nullptr) {
+        cerr << "Error al cargar la imagen distorsionada." << endl;
+        return -1; // Salimos si no se carga correctamente la imagen distorsionada.
+    }
+
+    // Cargamos mascara de color
+    unsigned char *mascaraColor = loadPixels(mascara, mascaraWidth, mascaraHeight);
+
+    if (mascaraColor == nullptr) {
+        cerr << "Error al cargar la mascara." << endl;
+        return -1; // Salimos si no se carga correctamente la mascara de color.
+    }
+
+
+
+
+    int n_pixels = 0;
+    int totalBytes = n_pixels * 3;
+    bool coincidencia = true;
+
+
+
+
+    // Cargar datos de M0.txt y comparar con el el ultimo paso (segundoXOR)
+    int semilla0 = 58077;
+
+    unsigned int* valoresM0 = loadSeedMasking("M0.txt", semilla0, n_pixels);
+    if (valoresM0 == nullptr) {
+        cerr << "Error al cargar M0.txt" << endl;
+        return -1;
+    }
+
+    for (int i = 0; i < totalBytes; i++) {
+        int suma = int(segundoXOR[semilla0 + i]) + int(mascaraColor[i]);
+        if (suma != int(valoresM0[i])) {
+            coincidencia = false;
+            break;
+        }
+    }
+
+    if (coincidencia) {
+        cout << "CORRECTO: originalrecuperada + M.bmp coincide con M0.txt" << endl;
+    } else {
+        cout << "INCORRECTO: originalrecuperada + M.bmp no coincide con M0.txt" << endl;
+    }
+
+    delete[] valoresM0;
+
+
+
+
+    // Cargar datos de M1.txt y comparar con el segundo paso (rotacion3bits)
+    int semilla1 = 100;
+
+    unsigned int* valoresM1 = loadSeedMasking("M1.txt", semilla1, n_pixels);
+    if (valoresM1 == nullptr) {
+        cerr << "Error al cargar M1.txt" << endl;
+        return -1;
+    }
+
+    for (int i = 0; i < totalBytes; i++) {
+        int suma = int(rotacion3bits[semilla1 + i]) + int(mascaraColor[i]);
+        if (suma != int(valoresM1[i])) {
+            coincidencia = false;
+            break;
+        }
+    }
+
+    if (coincidencia) {
+        cout << "CORRECTO: P1 + M.bmp coincide con M1.txt" << endl;
+    } else {
+        cout << "INCORRECTO: P1 + M.bmp no coincide con M1.txt" << endl;
+    }
+
+    delete[] valoresM1;
+
+
+
+
+    // Cargar datos de M2.txt y comparar con el primer paso (primerXOR)
+    int semilla2 = 15;
+
+    unsigned int* valoresM2 = loadSeedMasking("M2.txt", semilla2, n_pixels);
+    if (valoresM2 == nullptr) {
+        cerr << "Error al cargar M2.txt" << endl;
+        return -1;
+    }
+
+    for (int i = 0; i < totalBytes; i++) {
+        int suma = int(primerXOR[semilla2 + i]) + int(mascaraColor[i]);
+
+        if (suma != int(valoresM2[i])) {
+            coincidencia = false;
+            break;
+        }
+    }
+
+    if (coincidencia) {
+        cout << "CORRECTO: P2 + M.bmp coincide con M2.txt" << endl;
+    } else {
+        cout << "CORRECTO: P2 + M.bmp no coincide con M2.txt" << endl;
+    }
+
+    delete[] valoresM2;
 
     return 0;
 }
@@ -96,69 +150,7 @@ int run_verificador() {
 
 
 
-// Mostrar la semilla y los pixeles de cada archivo txt (M0, M1, M2)
 
-
-
-
-/*
-    int seed = 0;
-    int n_pixels = 0;
-
-    // Usamos la misma variable para cargar los datos de los tres archivos
-    unsigned int* maskingData = nullptr;
-
-
-    // Cargar y mostrar los datos de M0.txt
-    maskingData = loadSeedMasking("M0.txt", seed, n_pixels);
-    if (maskingData != nullptr) {
-        for (int i = 0; i < n_pixels * 3; i += 3) {
-            cout << "Pixel " << i / 3 << ": ("
-                 << maskingData[i] << ", "
-                 << maskingData[i + 1] << ", "
-                 << maskingData[i + 2] << ")" << endl;
-        }
-        delete[] maskingData;  // Liberar memoria
-        maskingData = nullptr;
-    } else {
-        cout << "Error al cargar M0.txt" << endl;
-    }
-
-
-
-
-
-    // Cargar y mostrar los datos de M1.txt
-    maskingData = loadSeedMasking("M1.txt", seed, n_pixels);
-    if (maskingData != nullptr) {
-        for (int i = 0; i < n_pixels * 3; i += 3) {
-            cout << "Pixel " << i / 3 << ": ("
-                 << maskingData[i] << ", "
-                 << maskingData[i + 1] << ", "
-                 << maskingData[i + 2] << ")" << endl;
-        }
-        delete[] maskingData;  // Liberar memoria
-        maskingData = nullptr;
-    } else {
-        cout << "Error al cargar M1.txt" << endl;
-    }
-
-
-    // Cargar y mostrar los datos de M2.txt
-    maskingData = loadSeedMasking("M2.txt", seed, n_pixels);
-    if (maskingData != nullptr) {
-        for (int i = 0; i < n_pixels * 3; i += 3) {
-            cout << "Pixel " << i / 3 << ": ("
-                 << maskingData[i] << ", "
-                 << maskingData[i + 1] << ", "
-                 << maskingData[i + 2] << ")" << endl;
-        }
-        delete[] maskingData;  // Liberar memoria
-        maskingData = nullptr;
-    } else {
-        cout << "Error al cargar M2.txt" << endl;
-    }
-*/
 
 
 
