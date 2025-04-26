@@ -45,8 +45,8 @@ unsigned int* loadSeedMasking(const char* nombreArchivo, int &seed, int &n_pixel
 
 int run_principal()
 {
-    QString archivoEntrada = "I_D.bmp";      // Imagen distorsionada final, usada como entrada
-    QString archivoMascara = "I_M.bmp";      // Mascara usada en los XOR
+    QString archivoEntrada = "I_D.bmp";             // Imagen distorsionada final, usada como entrada
+    QString archivoMascara = "I_M.bmp";             // Mascara usada en los XOR
     QString archivoSalidaFinal = "ResultadoF.bmp";  // Resultado de la imagen original recuperada
 
     int width = 0, height = 0;
@@ -70,7 +70,7 @@ int run_principal()
         return -1;
     }
 
-    // 3. Aplicar XOR entre I_D.bmp y I_M.bmp   (resultado intermedio (rotado IR3))
+    // 3. Aplicar XOR entre I_D.bmp y I_M.bmp (resultado intermedio (rotado IR3))
     unsigned char* P2 = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
         P2[i] = xor_bits(imgDistorsionada[i], mascara[i]);
@@ -81,10 +81,10 @@ int run_principal()
         cerr << "Error al guardar la imagen P2.bmp" << endl;
     }
 
-    // 4. Aplicar rotación 3 bits a la izquierda sobre IR3 → recuperamos P1
+    // 4. Aplicar rotacion de 3 bits a la izquierda sobre P2 (recuperamos P1)
     unsigned char* P1 = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
-        P1[i] = rotacion_left(P2[i], 3);
+        P1[i] = rotate_left(P2[i], 3);
     }
 
     // Guardar P1 para verificacion externa
@@ -92,7 +92,7 @@ int run_principal()
         cerr << "Error al guardar la imagen P1.bmp" << endl;
     }
 
-    // 5. XOR entre P1 y máscara → recuperamos imagen original I_O
+    // 5. XOR entre P1 y mascara (recuperamos la imagen original)
     unsigned char* originalRecuperada = new unsigned char[width * height * 3];
     for (int i = 0; i < width * height * 3; i++) {
         originalRecuperada[i] = xor_bits(P1[i], mascara[i]);
@@ -114,10 +114,8 @@ int run_principal()
     delete[] originalRecuperada;
 
 
-
-
     // Mostrar la semilla y los pixeles de cada archivo txt (M0, M1, M2)
-
+    /*
     int seed = 0;
     int n_pixels = 0;
 
@@ -170,11 +168,13 @@ int run_principal()
     } else {
         cout << "Error al cargar M2.txt" << endl;
     }
+*/
 
     return 0;
 }
 
 unsigned char* loadPixels(QString input, int &width, int &height){
+
     /*
  * @brief Carga una imagen BMP desde un archivo y extrae los datos de píxeles en formato RGB.
  *
@@ -197,7 +197,7 @@ unsigned char* loadPixels(QString input, int &width, int &height){
 
     // Verifica si la imagen fue cargada correctamente
     if (imagen.isNull()) {
-        cout << "Error: No se pudo cargar la imagen BMP." << std::endl;
+        cout << "Error: No se pudo cargar la imagen BMP." << endl;
         return nullptr; // Retorna un puntero nulo si la carga falló
     }
 
